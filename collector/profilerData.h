@@ -2,6 +2,11 @@
 #define PROFILER_DATA_H
 
 #include <iostream>
+#include <string.h> //for memcmp
+#include <assert.h>
+
+#include "stackwalker.h"
+
 #ifndef BACKTRACE_LENGTH
 #define BACKTRACE_LENGTH 5
 #endif //BACKTRACE_LENGTH
@@ -14,7 +19,43 @@
 #define FRAME_DELEMETER ":"
 #define HIT_DELEMETER  "="
 
-typedef void* StackElement[BACKTRACE_LENGTH]; 
+typedef   Stackwalker::stackFrameAddr StackData[BACKTRACE_LENGTH] ;
+struct OneStack
+{
+   public:
+
+      void set (const StackData& iNewAddr)
+      {
+         memcpy (mStack, iNewAddr, sizeof (mStack));
+      }
+
+      void flush ()
+      {
+         for (int i = 0; i < BACKTRACE_LENGTH; ++i)
+         {
+            if (i > 0)
+               std::cout  <<FRAME_DELEMETER <<mStack[i];
+            else 
+               std::cout <<mStack[i];
+         }
+      }
+
+      /********************************************************************************
+       * Get the bucket index for a stack
+       ********************************************************************************/
+      static unsigned int hashToBucket (const StackData& iStack)
+      {
+         return (unsigned int)iStack[0] % NUM_OF_BUCKETS;
+      }
+
+      bool operator == (const StackData& iOther) const
+      {
+         return (0 == memcmp (mStack, iOther, sizeof (StackData)));
+      }
+
+   private: 
+      StackData mStack ;
+};
 
 /********************************************************************************
  * This is the class that hold all the collected stacktrace data:
@@ -23,6 +64,9 @@ typedef void* StackElement[BACKTRACE_LENGTH];
  *  If we already have this stack in this bucket - we increment the hit counter.
  *  If we do not have it, byut we have space in the bucket - we add it to the bucket
  *  otherwise we flush a stuck, and write the new one.
+ *
+ *   This does not needs to be TS. We anly call it fron the signal handler, that sends
+ *   one thread only...
  ********************************************************************************/
 class ProfilerData
 {
@@ -34,10 +78,8 @@ class ProfilerData
     ********************************************************************************/
    struct DataElement
    {
-      StackElement m_stack;
-      unsigned int m_hitCounter;
-
-      DataElement () : m_hitCounter (0) {}
+      DataElement () : m_hitCounter (0)
+      { }
 
       void addHit ()
       {
@@ -58,32 +100,35 @@ class ProfilerData
       {
          if (!isEmpty())
          {
-            for (int i = 0; i < BACKTRACE_LENGTH; ++i)
-            {
-               if (i > 0)
-               std::cout  <<FRAME_DELEMETER <<m_stack[i];
-               else 
-                  std::cout <<m_stack[i];
-
-            }
-
+            m_stack.flush();
             std::cout <<HIT_DELEMETER<<m_hitCounter <<std::endl;
             markAsEmpty();
          }
       }
 
-      void set (const StackElement     i_stack)
+      void set (const StackData& i_stack)
       {
-         for (int i = 0; i < BACKTRACE_LENGTH; ++i)
-         {
-            m_stack[i] = i_stack[i];
-         }
+         assert (isEmpty());
+         m_stack.set (i_stack);
          m_hitCounter = 1;
       }
+
+      unsigned int getHitCounter () const
+      {
+         return m_hitCounter;
+      }
+
+      const OneStack& getStack () const
+      {
+         return m_stack;
+      }
+
+      private:
+      OneStack m_stack;
+      unsigned int m_hitCounter;
    };
 
-   public :
-
+   public:
    /********************************************************************************
     * Flush all data (should only be called, when profiler is stoped
     ********************************************************************************/
@@ -102,43 +147,20 @@ class ProfilerData
     * Add one stack frame
     * Implements the logic described in the class comment
     ********************************************************************************/
-   void addStack (const StackElement i_stack)
+   void addStack (const StackData& i_stack)
    {
-      unsigned int bucketIndex = hash (i_stack);
+      unsigned int bucketIndex = OneStack::hashToBucket(i_stack);
       unsigned int index = getWritePosInBacket(bucketIndex, i_stack);
 
       if ( m_data[bucketIndex][index].isEmpty())
       {
-         m_data[bucketIndex][index].set(i_stack);
+         m_data[bucketIndex][index].set(i_stack); 
       } else {
          m_data[bucketIndex][index].addHit();
       }
    }
 
-
    private:
-
-   /********************************************************************************
-    * Get the bucket index for a stack
-    ********************************************************************************/
-   unsigned int hash (const StackElement i_stack) const 
-   {
-      return (unsigned int)i_stack[0] % NUM_OF_BUCKETS;
-   }
-
-   /********************************************************************************
-    * Basically, this is operator == for StackElement...
-    ********************************************************************************/
-   unsigned int isSameStack (const StackElement i_first, const StackElement i_second) const
-   {
-      bool isSame = true;
-      for (unsigned int i = 0; i < BACKTRACE_LENGTH && isSame ; ++i)
-      {
-         isSame = (i_first[i] == i_second[i]);
-      }
-      return isSame;
-   }
-
 
    /********************************************************************************
     * This function is responsible of finding the place in the bucket where 
@@ -146,9 +168,9 @@ class ProfilerData
     * It will ALWAYS return an index to write to. If needed this index will be flushed
     * so we can overwrite it.
     ********************************************************************************/
-   unsigned int getWritePosInBacket (int bucketIndex, const StackElement i_stack ) 
+   unsigned int getWritePosInBacket (int bucketIndex, const StackData& i_stack )// const
    {
-      unsigned int minHitCounter    = m_data[bucketIndex][0].m_hitCounter;
+      unsigned int minHitCounter    = m_data[bucketIndex][0].getHitCounter();
       unsigned int minConterIndex   = 0;
 
       for (unsigned int i = 0; i < ELEMENTS_IN_BUCKET; ++i)
@@ -157,11 +179,11 @@ class ProfilerData
          {
             return i;
          }
-         if (isSameStack(i_stack, m_data[bucketIndex][i].m_stack))
+         if (m_data[bucketIndex][i].getStack() == i_stack)
          {
             return i;
          }
-         if (m_data[bucketIndex][i].m_hitCounter < minHitCounter)
+         if (m_data[bucketIndex][i].getHitCounter() < minHitCounter)
          {
             minConterIndex = i;
          }

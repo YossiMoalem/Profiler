@@ -1,3 +1,6 @@
+#ifndef STACK_WALKER_H
+#define STACK_WALKER_H
+
 #include <iostream> //for sts::cout in  testing func
 #include <stdio.h>//for snprintf
 #include <dlfcn.h> //for dl_info, dladdr
@@ -30,14 +33,14 @@ class Stackwalker
  *  startingFrame   : Number of frames to skip (default 0). those frames are NOT counted in the
  *                  stackDeapth.
  ********************************************************************************/
-   static int getStacktrace (int stackDeapth, stackFrameAddr o_stackFrameAddr[], unsigned int startingFrame = 0)
+   static int getStacktrace (unsigned int stackDeapth, stackFrameAddr o_stackFrameAddr[], unsigned int startingFrame = 0)
    {
       //Tie ebp and esp
       register void* ebp asm("ebp");
       register void *esp asm ("esp");
 
       struct frame* curFrame = (frame*) ebp;
-      int curFrameIndex = 0;
+      unsigned int curFrameIndex = 0;
 
       //Skip till the startingFrame
       while (curFrame 
@@ -111,3 +114,5 @@ class Stackwalker
    }
 
 };
+
+#endif
