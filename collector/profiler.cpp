@@ -80,9 +80,11 @@ int Profiler::finilize ()
  ********************************************************************************/
 void Profiler::report ()
 {
-   static StackData curStack;
+   static RawStack curRowStack;
+   static OneStack curStack;
    //TODO: compare this to backtrace(). Anyone has a good profiler???? :-)
-   Stackwalker::getStacktrace(BACKTRACE_LENGTH, curStack, 2 /*2 internal, FW frames */);
+   Stackwalker::getStacktrace(BACKTRACE_LENGTH, curRowStack, 2 /*2 internal, FW frames */);
+   curStack.set(curRowStack);
    m_data.addStack(curStack);
 }
 

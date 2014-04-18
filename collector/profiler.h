@@ -1,9 +1,11 @@
 #ifndef PROFILER_H
 #define PROFILER_H
 
-#include "profilerData.h"
 
 #include <signal.h>
+
+#include "profilerData.h"
+#include "stackData.h"
 
 static void sigProfHandler (int );
 
@@ -26,7 +28,7 @@ class Profiler
 
    private:
    static Profiler* s_inst;
-   ProfilerData     m_data;
+   ProfilerData<OneStack>     m_data;
    struct sigaction m_oldHandler;
 
 };
