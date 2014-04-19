@@ -1,9 +1,13 @@
 #ifndef PROFILER_DATA_H
 #define PROFILER_DATA_H
 
-#include <iostream>
 #include <string.h> //for memcmp
 #include <assert.h>
+#include <time.h> //for time
+#include <fcntl.h>//for open
+#include <stdlib.h> //for exit
+#include <unistd.h> //for getpid
+#include <errno.h>
 
 #include "bucketContainerElement.h"
 
@@ -30,6 +34,10 @@ class ProfilerData
 {
 
    public:
+
+   ProfilerData(int iLogFD) : mLogFD(iLogFD)
+   { }
+
    /********************************************************************************
     * Flush all data (should only be called, when profiler is stoped
     ********************************************************************************/
@@ -39,7 +47,7 @@ class ProfilerData
       {
          for (int ii = 0; ii < ELEMENTS_IN_BUCKET; ++ii)
          {
-            m_data[i][ii].flush();
+            m_data[i][ii].flush(mLogFD);
          }
       }
    }
@@ -48,7 +56,7 @@ class ProfilerData
     * Add one stack frame
     * Implements the logic described in the class comment
     ********************************************************************************/
-   void addStack (const KEY& iKey)
+   void addHit (const KEY& iKey)
    {
       unsigned int bucketIndex = KEY::hashToBucket(iKey);
       unsigned int index = getWritePosInBacket(bucketIndex, iKey);
@@ -89,13 +97,14 @@ class ProfilerData
             minConterIndex = i;
          }
       }
-      m_data[bucketIndex][minConterIndex].flush();
+      m_data[bucketIndex][minConterIndex].flush(mLogFD);
       return minConterIndex;
    }
 
 
    private:
    DataElement<KEY> m_data [NUM_OF_BUCKETS][ELEMENTS_IN_BUCKET];
+   int              mLogFD;
 
 };
 

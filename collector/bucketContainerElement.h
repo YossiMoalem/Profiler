@@ -1,6 +1,7 @@
 #ifndef BUCKET_CONTAINER_ELEMENT_H
 #define BUCKET_CONTAINER_ELEMENT_H
 
+#include <stdio.h> //for snprintf
 /********************************************************************************
  * This is the building block of the accumilated data:
  * It holds the stack trace (of a single frame)
@@ -30,12 +31,18 @@ struct DataElement
       m_hitCounter = 0;
    }
 
-   void flush () 
+   void flush (int iLogFD) 
    {
       if (!isEmpty())
       {
-         mData.flush();
-         std::cout <<HIT_DELEMETER<<m_hitCounter <<std::endl;
+         static size_t maxElementLength = KEY::valLength + sizeof (HIT_DELEMETER) + 10 /* int max size */ + 1;
+         char elementStr[maxElementLength];
+         size_t length = mData.toString(elementStr);
+         length += snprintf (&elementStr[length], maxElementLength - length, "%s", HIT_DELEMETER);
+         length += snprintf (&elementStr[length], maxElementLength - length, "%d\n", m_hitCounter);
+
+         write (iLogFD, elementStr, length);
+
          markAsEmpty();
       }
    }

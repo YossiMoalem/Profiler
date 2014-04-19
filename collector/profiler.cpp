@@ -1,5 +1,6 @@
-#include <sys/time.h>
-#include <string.h>
+#include <sys/time.h>//for setitimer
+#include <string.h> //for memset
+#include <iostream>//for std::cerr
 
 #include "profiler.h"
 #include "stackwalker.h"
@@ -85,8 +86,39 @@ void Profiler::report ()
    //TODO: compare this to backtrace(). Anyone has a good profiler???? :-)
    Stackwalker::getStacktrace(BACKTRACE_LENGTH, curRowStack, 2 /*2 internal, FW frames */);
    curStack.set(curRowStack);
-   m_data.addStack(curStack);
+   m_data.addHit(curStack);
 }
+
+/********************************************************************************
+ * getLogFD
+ * Create log file. This should be passed to the data container to flusg data to.
+ ********************************************************************************/
+int Profiler::getLogFD()
+{
+   //Open log file
+   char filename[100];
+   snprintf(filename, 100, "Prof_%d_%ld.prf", getpid(), time(0));
+   int logFD = open (filename, O_WRONLY | O_CREAT | O_EXCL | O_NOATIME );
+   if (logFD == -1)
+   {
+      if (errno == EEXIST)
+      {
+         std::cerr <<"Error: The file: "<<filename <<" already exists. Cowerdly exiting.." <<std::endl;
+      } else if (errno == EACCES){
+         std::cerr <<"Error: Cannot open log file "<<filename<<" (Permission Denied). Exiting..."<<std::endl; 
+      } else {
+         std::cerr <<"Error: Cannot open log file "<<filename<<"(errno = " <<errno <<" ). Exiting..."<<std::endl;
+      }
+      exit(1);
+   }
+    return logFD;
+}
+
+/********************************************************************************
+ * Profiler default C'tor
+ ********************************************************************************/
+Profiler::Profiler () : m_data(getLogFD())
+{ }
 
 /********************************************************************************
  * ProfilerStarter

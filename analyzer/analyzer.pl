@@ -28,6 +28,8 @@ while (my $curLine = <$gLogFileHnd>)
    $curLine =~ /^(.+)=(\d+)\s*$/ ;
    my $stack = $1;
    my $hits = $2;
+   #remove (null), (nil) ...
+   $stack =~ s/\([niul]+\)/0/g;
 
    #count hits:
    if (!defined $gStackCounter{$stack} )

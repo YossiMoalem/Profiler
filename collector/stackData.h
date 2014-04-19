@@ -14,6 +14,11 @@ typedef Stackwalker::stackFrameAddr RawStack[BACKTRACE_LENGTH] ;
 struct OneStack
 {
    public:
+     //first we calculate the size of address in bits. 
+     //Every 4 bits is represented by i char.
+     //Then we nees to add 2 for the 0x
+     static const int SizeOfAddressAsString = (sizeof(void*) * 8 / 4) + 2 ; 
+     static const size_t valLength = (SizeOfAddressAsString + sizeof(FRAME_DELEMETER)) * BACKTRACE_LENGTH;
 
       void set (const RawStack& iNewAddr)
       {
@@ -25,15 +30,17 @@ struct OneStack
          memcpy (mStack, iNewStack.mStack, sizeof(mStack));
       }
 
-      void flush ()
+      size_t toString(char oStack[])
       {
-         for (int i = 0; i < BACKTRACE_LENGTH; ++i)
+         //assert (sizeof (oStack) >= valLength);
+         size_t length = snprintf (oStack, valLength, "%p", mStack[0]);
+         
+         for (int i = 1; i < BACKTRACE_LENGTH; ++i)
          {
-            if (i > 0)
-               std::cout  <<FRAME_DELEMETER <<mStack[i];
-            else 
-               std::cout <<mStack[i];
+            length += snprintf (&oStack[length], valLength - length, "%s%p", FRAME_DELEMETER, mStack[i]);
          }
+         assert (length < valLength);
+         return length;
       }
 
       /********************************************************************************

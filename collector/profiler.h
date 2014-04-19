@@ -24,12 +24,13 @@ class Profiler
 
    private:
    void report();
-   Profiler () {}
+   int  getLogFD();
+   Profiler ();
 
    private:
-   static Profiler* s_inst;
-   ProfilerData<OneStack>     m_data;
-   struct sigaction m_oldHandler;
+   static Profiler*         s_inst;
+   ProfilerData<OneStack>   m_data;
+   struct sigaction         m_oldHandler;
 
 };
 
