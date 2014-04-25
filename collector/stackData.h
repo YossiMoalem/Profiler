@@ -1,7 +1,12 @@
 #ifndef STACK_DATA_H
 #define STACK_DATA_H
 
+#include <assert.h>//for assert 
+#include <string.h>//for memcpy
+#include <errno.h>//for errno
+
 #include "stackwalker.h"
+
 #define FRAME_DELEMETER ":"
 
 #ifndef BACKTRACE_LENGTH
@@ -30,17 +35,17 @@ struct OneStack
          memcpy (mStack, iNewStack.mStack, sizeof(mStack));
       }
 
-      size_t toString(char oStack[])
+      const char* toString()
       {
-         //assert (sizeof (oStack) >= valLength);
-         size_t length = snprintf (oStack, valLength, "%p", mStack[0]);
+         static char buff [valLength];
+         size_t length = snprintf (buff, valLength, "%p", mStack[0]);
          
          for (int i = 1; i < BACKTRACE_LENGTH; ++i)
          {
-            length += snprintf (&oStack[length], valLength - length, "%s%p", FRAME_DELEMETER, mStack[i]);
+            length += snprintf (&buff[length], valLength - length, "%s%p", FRAME_DELEMETER, mStack[i]);
          }
          assert (length < valLength);
-         return length;
+         return buff;
       }
 
       /********************************************************************************

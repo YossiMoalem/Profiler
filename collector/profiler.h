@@ -4,7 +4,7 @@
 
 #include <signal.h>
 
-#include "profilerData.h"
+#include "BucketDb.h"
 #include "stackData.h"
 
 static void sigProfHandler (int );
@@ -29,7 +29,7 @@ class Profiler
 
    private:
    static Profiler*         s_inst;
-   ProfilerData<OneStack>   m_data;
+   BucketDb<OneStack, int>  m_data;
    struct sigaction         m_oldHandler;
 
 };

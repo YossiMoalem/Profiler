@@ -1,6 +1,10 @@
 #include <sys/time.h>//for setitimer
 #include <string.h> //for memset
 #include <iostream>//for std::cerr
+#include <fcntl.h>//for open flag
+#include <stdlib.h>//for exit
+#include <unistd.h>//for getpid
+
 
 #include "profiler.h"
 #include "stackwalker.h"
@@ -86,7 +90,7 @@ void Profiler::report ()
    //TODO: compare this to backtrace(). Anyone has a good profiler???? :-)
    Stackwalker::getStacktrace(BACKTRACE_LENGTH, curRowStack, 2 /*2 internal, FW frames */);
    curStack.set(curRowStack);
-   m_data.addHit(curStack);
+   m_data.set(curStack, 1);
 }
 
 /********************************************************************************
@@ -111,7 +115,7 @@ int Profiler::getLogFD()
       }
       exit(1);
    }
-    return logFD;
+   return logFD;
 }
 
 /********************************************************************************
